@@ -1,0 +1,455 @@
+
+django-admin (show list of important admin commands)
+[django]
+    check
+    compilemessages
+    createcachetable
+    dbshell
+    diffsettings
+    dumpdata
+    flush
+    inspectdb
+    loaddata
+    makemessages
+    makemigrations
+    migrate
+    runserver
+    sendtestemail
+    shell
+    showmigrations
+    sqlflush
+    sqlmigrate
+    sqlsequencereset
+    squashmigrations
+    startapp
+    startproject
+    test
+    testserver
+
+There're two kind of Django "projects" that I have in my ~/projects/ directory, both have a bit different structure.:
+
+Stand-alone websites
+Pluggable applications
+Stand-alone website
+Mostly private projects, but doesn't have to be. It usually looks like this:
+
+~/projects/project_name/
+
+docs/               # documentation
+scripts/
+  manage.py         # installed to PATH via setup.py
+project_name/       # project dir (the one which django-admin.py creates)
+  apps/             # project-specific applications
+    accounts/       # most frequent app, with custom user model
+    __init__.py
+    ...
+  settings/         # settings for different environments, see below
+    __init__.py
+    production.py
+    development.py
+    ...
+
+  __init__.py       # contains project version
+  urls.py
+  wsgi.py
+static/             # site-specific static files
+templates/          # site-specific templates
+tests/              # site-specific tests (mostly in-browser ones)
+tmp/                # excluded from git
+setup.py
+requirements.txt
+requirements_dev.txt
+pytest.ini
+...
+Settings
+The main settings are production ones. Other files (eg. staging.py, development.py) simply import everything from production.py and override only necessary variables.
+
+For each environment, there are separate settings files, eg. production, development. I some projects I have also testing (for test runner), staging (as a check before final deploy) and heroku (for deploying to heroku) settings.
+
+Requirements
+I rather specify requirements in setup.py directly. Only those required for development/test environment I have in requirements_dev.txt.
+
+Some services (eg. heroku) requires to have requirements.txt in root directory.
+
+setup.py
+Useful when deploying project using setuptools. It adds manage.py to PATH, so I can run manage.py directly (anywhere).
+
+Project-specific apps
+I used to put these apps into project_name/apps/ directory and import them using relative imports.
+
+Templates/static/locale/tests files
+I put these templates and static files into global templates/static directory, not inside each app. 
+These files are usually edited by people, who doesn't care about project code structure or python at all. 
+If you are full-stack developer working alone or in a small team, you can create per-app templates/static directory. It's really just a matter of taste.
+
+The same applies for locale, although sometimes it's convenient to create separate locale directory.
+
+Tests are usually better to place inside each app, but usually there is many integration/functional tests which tests more apps working together, so global tests directory does make sense.
+
+Tmp directory
+There is temporary directory in project root, excluded from VCS. It's used to store media/static files and sqlite database during development. Everything in tmp could be deleted anytime without any problems.
+
+Virtualenv
+I prefer virtualenvwrapper and place all venvs into ~/.venvs directory, but you could place it inside tmp/ to keep it together.
+
+Project template
+I've created project template for this setup, django-start-template
+
+Deployment
+Deployment of this project is following:
+
+source $VENV/bin/activate
+export DJANGO_SETTINGS_MODULE=project_name.settings.production
+git pull
+pip install -r requirements.txt
+
+# Update database, static files, locales
+manage.py syncdb  --noinput
+manage.py migrate
+manage.py collectstatic --noinput
+manage.py makemessages -a
+manage.py compilemessages
+
+# restart wsgi
+touch project_name/wsgi.py
+You can use rsync instead of git, but still you need to run batch of commands to update your environment.
+
+Recently, I made [django-deploy][2] app, which allows me to run single management command to update environment, but I've used it for one project only and I'm still experimenting with it.
+
+Sketches and drafts
+Draft of templates I place inside global templates/ directory. I guess one can create folder sketches/ in project root, but haven't used it yet.
+
+Pluggable application
+These apps are usually prepared to publish as open-source. I've taken example below from django-forme
+
+~/projects/django-app/
+
+docs/
+app/
+tests/
+example_project/
+LICENCE
+MANIFEST.in
+README.md
+setup.py
+pytest.ini
+tox.ini
+.travis.yml
+...
+Name of directories is clear (I hope). I put test files outside app directory, but it really doesn't matter. It is important to provide README and setup.py, so package is easily installed through pip
+
+
+manage.py - run cmd commands
+
+
+Understand manage.py completely
+django-admin startproject django_project
+python manage.py runserver ------(to strt app)
+$ python manage.py startapp blog
+from django.http import HttpResponse <just for returning some raw html>
+new apps in same folder as original manage.py
+key things - admin (imported from ?), admin.sites.urls, include module, HttpResponse module, django-urls, include "otherApps.urls" (in quotes), path, 
+
+project urls.py -> 1) path('<can use some base route>', include('blog.urls')), 2) path('admin/', admin.site.urls),
+app urls.py -> url_patterns = [path(<parameter>, <func which would return in rendering an html page> , name=)] e.g: path('about/', views.about, name="blog-about"),    [you must import related views.py]
+What are python views?
+So check project's urls.py, you will see other urls 'included' (blog.urls)
+production vs development
+learn python debugging
+
+https://www.youtube.com/watch?v=JT80XhYJdBw good course
+
+BlogConfig(from apps.py) copied to in settings.py
+Always add new apps to INSTALLED APPS in settings.py, good when using templates and databases (models are searched)
+
+
+templating engine : JINJA2, 
+template inheritance
+
+
+static folder at root directory of current app (blog folder)
+
+check out base.html in lecture3 .. how to link to urls in html page. done {href="{% url 'blog-home' %}"}
+
+createsuperuser in 3.0
+$ python manage.py createsuperuser
+$ python manage.py makemigrations
+$ python manage.py migrate
+
+Here we are writing our endpoints in Views.py
+To view the SQL during migrate (some sort of update to database), remember app name, 0001<i.e. migration number>
+python manage.py sqlmigrate blog 0001
+
+ORM sab kuch kar deta hai SQL se related, Just DO below:
+from django.db import models in models.py file 
+
+migrations help in very complicated updates to Db whenever we want
+
+
+python manage.py shell
+Also, django contrib has many functions -> like auth.models, auth.forms.
+shell to test database, via classes using ORM
+How see here:
+>>from blog.models import Post (blog is directory, models.py is file, class Post)
+>>> from django.contrib.auth.models import User 
+>>> User.objects.all()
+>>> user = User.objects.filter(username='Vivek').first()
+>>> user.pk
+>>> user = User.objects.get(id=1)
+>>> Post.objects.all() (see all posts)
+>>> post_1 = Post(title = 'Blog_1', content = "First post content!", author=user)  (Note: creating posts: we used 'user', date is default) 
+>>> post_1.save() 
+
+>>> user.post_set.all() (user is whose posts we want, Post is class whose objects we want, _set is to update)
+>>> user.post_set.create(title='Blog_3', content='Third post content')
+to view about Post values:
+in models.py, add
+    def __str__(self): #magic methods in python
+        return self.title
+
+
+#To allow models to integrate with admin page, In current app admin.py file
+from .models import Post
+admin.site.register(Post)
+
+
+see how forms are created in django
+csrf, parameter fills the form,
+form.as_p method
+we will use few in-built methods
+For second app, IN project urls.py , we do not use include this time. We have used <app>_views
+
+forms had limited fields, we need to create new file forms.py and inherit forms related class of our choice to create a newform class
+
+for more functionality in Forms..we will install crispy forms
+its an app, so add in settings.py, also add CRISPY_TEMPLATE_PACK = 'bootstrap4' to use bootstrap4  
+contrib.auth has own views
+we are using contrib's class based views. We can tell views where to find html file in argument as templateX(nahi) template_name=users/login.html
+In settings.py tell whre to go after login, LOGIN_REDIRECT_URL = 'blog-home'
+
+base.html me kahin se user tapak gya hai and we can use {% if user.is_authenticated %} to show correct navigation bar
+
+To make sure user access certain pages only when they are logged in then we use contrib auth.decorator import login_required
+then at route func of that page use @login_required --> Note class based views have different approach to achieve the same
+
+Change location where images are saved and the updating urls
+add to settings.py
+MEDIA_ROOT= os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+in project's urls.py:
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+	
+	
+How to automatically attach Profiles to User..We do this via signals
+also add signals integration in apps.py of project:
+class UsersConfig(AppConfig):
+    name = 'users'
+************************************ #this part added
+    def ready(self):
+        import users.signals
+*********************************
+
+If form has image or media add enctype='multipart/form-data'
+The Profile page will NOW allow users to update their information and also add a new profile picture.
+create 2 new forms in Forms.py  imported Model forms
+add forms to function (profile function here) which renders the page (here profile page) in views.py of users.
+pass the forms to the page as context variable.
+in HTML add context related forms using the used variables for forms. (I copied form from register page) remember 
+
+to keep current fields on form intact, remember we passed cureent user data to form
+so, 'user_form' : UserUpdateForm(<here comes the object with values>)
+'user_form' : UserUpdateForm(inheritance = request.user)
+But we need to post this data too which could be the changed data user has used.
+if request.method=='POST':
+	#use request.POST
+	'user_form' : UserUpdateForm(request.POST, inheritance = request.user)
+else:
+	'user_form' : UserUpdateForm(inheritance = request.user)  # normal like above without post data
+	
+Note profile will also have image so request.FILES is also passed, profile_form : ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+
+image resizing using Pillow
+
+Class based Views:*********************************
+List views, detail views, delete views, create, update
+
+#CV is looking for <app>/<model>_<viewtype>.html
+context_object_name = 'posts'
+ordering = [-'date_posted']
+
+In urls.py of blog, from .views import PostListView ..and then remove old views.home and add path('', PostListView.as_view(), name="blog-home"),
+
+for detailview import detailview, it is mainly to show one post in detail
+we will need new route for each post now, so create new route in url_patterns in urls.py. SO like this post/<int: pk> i.e. post1, post2
+
+template_name for Create and Update Views is Different. they will be <model>_form.html
+create view is a form, so it needs fields tag.
+
+There is integrity error because there is primary key i.e user.
+we will modify PostCreateView and override form_valid(self.form) and assign form.instance.author = self.request.user and vakidate now using super().form_valid(form)
+now view does not know which url to redirect to but it knows how to redirect so we must specify the redirect url
+Note: This is done in Models.py file, using an another function getabsoluteurl, for this (from django.urls import reverse )
+reverse will return full path as string.    return reverse('post-detail', kwargs = {'pk': self.pk}) # this will be created just now, we want post-detail page but with post no. so using pk.
+
+But cannot create a new post without login. To ensure that we had used decorator in function based views. here with class based views we need (from django.contrib.auth.mixins import LoginRequiredMixin)
+in views.py, pass LoginRequiredMixin as argument to def PostCreateView(LoginRequiredMixin, CreateView):
+
+Now we don't want to allow anyone to update other's posts, so we need a check if this is the author. We do this by importing UserPassesTestMixin and overriding test_func with the required condition.
+
+for Delete template name convention <model>_confirm_delete.html
+after deleting we need to send user to some page (home in this case). we will add success_url = '/'
+
+to paginate we need Pagination module which is used available in through django views.
+in PostListView we just add paginate_by = 5
+
+To show one particular user's post we will need to filter his posts. Coz right now we are showing all posts on home page
+We will create new html page for the user's post
+Now comes the chutiyap: we again have to override some fucking function which emerges from nowhere. Fucking Django 
+In blog/views.py, create new class same as PostListView and override this bs function def get_queryset()  (also import User from contrib)
+Even if click that user or open th elink manually we must have 404 page. For this also django has built-in functionality in django.shortcuts , import get_object_or_404
+****
+username is inside URL, how to get this python. we will use get_object_or_404 and kwargs and username parameter. class based views me render nhi use karna padta
+ye raha bhosdika
+class UserPostListView(ListView):
+    model = Post
+    template_name = 'blog/users_post.html' #Class Views is looking for <app>/<model>_<viewtype>.html
+    context_object_name = 'posts'
+    # ordering = ['-date_posted']
+    paginate_by = 5
+
+    def get_queryset(self):
+        user = get_object_or_404(User, username=self.kwargs.get('username'))
+        return Post.objects.filter(author=user).order_by('-date_posted')
+		
+
+How to get parameter inside HTML using the url, view.kwargs.<parameter> so, to get username we can use view.kwargs.username
+
+why middleware, custom middleware in django
+
+/etc/hosts ipaddress hostname(django-server)
+adduser vivekotheruser fill information
+add user vivekotheruser sudo
+login as vivekotheruser@ipaddress
+setup ssh keys besed authentication--
+mkdir -p ~/.ssh 
+ls -la
+ssh-keygen -b 4096
+scp ~./.ssh/id_rsa.pub vivekotheruser@ipaddress:~/.ssh/authorized_keys
+sudo chmod 700 ~/.ssh/
+sudo chmod 600 ~/.ssh/* (all internal files)
+Above steps helps in login without password
+sudo nano /etc/ssh/sshd_config
+change PetRootLogin to no,
+change PasswordAuthentication to no
+sudo systemctl restart sshd
+sudo apt-get install ufw (uncomplicated firewall) better than iptables
+sudo ufw default allow outgoing
+sudo ufw default deny incoming
+sudo ufw allow ssh
+sudo ufw allow 8000 (initially django port 8000)
+sudo ufw enable
+sudo ufw status (tells which ports are allowed)
+
+In our laptop
+activate venv
+pip freeze (shows all dependencies)
+pip freeze > requirements.txt
+add requirements.txt to django_project
+scp -r django_project vivekotheruser@ipaddress:~/
+sudo apt-get install python3-pip
+sudo apt-get install python3-venv
+python3 -m venv django_project/venv
+cd django_project
+pip install -r requirements.txt
+sudo nano django_project/settings.py
+SECRET_KEY = "ihojpp" <clear this off after creating config.json>
+Allowed_HOSTS =[< ipaddress >]
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+To allow static files to work:
+python manage.py collectstatic
+python manage.py runserver 0.0.0.0:8000
+
+access in chrome via ipaddress:8000 not (0.0...)
+WSGI allows webserver like Apache or Nginx to talk to python
+WSGI is the Web Server Gateway Interface. It is a specification that describes how a web 
+server communicates with web applications, and how web applications can be chained together 
+to process one request.
+
+sudo apt-get install apache2
+sudo apt-get install libapache2-mod-wsgi-py3
+cd /etc/apache2/sites-available/
+copy 000-default.conf to django_project.conf
+
+In django_project.conf:
+mapping request starting with static to our apps' static folder
+add just before </VirtualHost> 
+Alias /static /home/vivekotheruser/django_project/static <means wherever static folder is>
+<Directory /home/vivekotheruser/django_project/static>
+	Require all granted
+</Directory>
+
+Alias /media /home/vivekotheruser/django_project/media
+<Directory /home/vivekotheruser/django_project/media>
+	Require all granted
+</Directory>
+
+# Now intergrating wsgi.py file to apache server
+<Directory /home/vivekotheruser/django_project/django_project>
+	<Files wsgi.py>
+		Require all granted
+	</Files>
+</Directory>
+
+WSGIScriptAlias / /home/vivekotheruser/django_project/django_project/wsgi.py
+WSGIDaemonProcess django_app python-path=/home/vivekotheruser/django_project python-home=/home/vivekotheruser/django_project/venv
+WSGIProcessGroup django_app
+
+enable site through apache----
+
+sudo a2ensite django_project
+sudo a2dissite 000-default.conf
+
+
+sudo chown:www-data django_project/db.sqlite3 (apache is group owner of db.sqlite3 file)
+sudo chmod 664 django_project/db.sqlite3
+sudo chown: www-data django_project/
+sudo chown -R: www-data django_project/media
+sudo chmod -R 775 django_project/media
+
+in etc folder config.json
+{
+	"SECRET_KEY":######,
+	"EMAIL_USER":"uhiiio",
+	"EMAIL_PASS":"iuhio"
+	
+}
+
+in settings.py
+import json
+with open('/etc/config.json') as config_file:
+	config = json.load(config_file)
+
+also,
+SECRET_KEY = config['SECRET_KEY']
+Debug = False
+
+in the end of file---
+EMAIL_HOST_USER = config.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = config.get('EMAIL_PASS')
+
+sudo ufw delete allow 8000
+sudo ufw delete allow http/tcp
+systemctl reload apache2
+sudo service apache2 restart
+
+sudo chmod 775 django_project/
+sudo service apache2 restart
+
+
+django rest framework
+https://www.youtube.com/watch?v=F5mRW0jo-U4 
+https://www.youtube.com/watch?v=XMu0T6L2KRQ&list=PLEsfXFp6DpzTOcOVdZF-th7BS_GYGguAS
+
+Developed Python Django web application for data analysis of regular logistics processes with Google Charts API and D3.js visualizations
